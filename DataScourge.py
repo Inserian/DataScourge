@@ -4,6 +4,34 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 
+if os.name == "nt":
+    import ctypes
+    ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+
+class ResultsWindow:
+    def __init__(self, master, results):
+        self.master = master
+        master.title("Results")
+
+        self.results_listbox = tk.Listbox(master, selectmode=tk.MULTIPLE, width=100)
+        self.results_listbox.pack()
+
+        for result in results:
+            self.results_listbox.insert(tk.END, f"{result['Path']} ({result['Size'] / (1024 * 1024):.2f} MB) last accessed on {result['Last Accessed'].strftime('%m/%d/%Y')} at {result['Last Accessed'].strftime('%I:%M %p')}")
+
+        self.delete_button = ttk.Button(master, text="Delete Selected Files", command=self.delete_selected_files)
+        self.delete_button.pack(pady=10)
+
+    def delete_selected_files(self):
+        selected_indices = self.results_listbox.curselection()
+
+        for i in reversed(selected_indices):
+            try:
+                os.remove(self.results_listbox.get(i))
+                self.results_listbox.delete(i)
+            except Exception as e:
+                print(f"Error deleting file: {e}")
+
 class SpaceFinderGUI:
     def __init__(self, master):
         self.master = master
@@ -50,64 +78,44 @@ class SpaceFinderGUI:
         self.scan_button = ttk.Button(master, text="Scan", command=self.scan_directory)
         self.scan_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
 
-        # Create result label
-        self.result_label = ttk.Label(master, text="")
-        self.result_label.grid(row=6, column=0, columnspan=2, pady=10)
-
     def select_directory(self):
-        # Open file dialog to select directory
         directory = filedialog.askdirectory()
-        # If directory is selected, update directory entry
         if directory:
             self.dir_entry.delete(0, tk.END)
             self.dir_entry.insert(tk.END, directory)
 
     def scan_directory(self):
-        # Get directory and parameters from GUI
         directory = self.dir_entry.get()
         min_file_size = int(self.file_size_entry.get()) * 1024 * 1024
         months_unused = int(self.months_unused_entry.get())
         exclude_extensions = self.exclude_extensions_entry.get().split(',')
         exclude_names = self.exclude_names_entry.get().split(',')
 
-        # Initialize an empty list to store results
         results = []
 
-        # Iterate over all files and folders in the directory and its subdirectories
         for root, dirs, files in os.walk(directory):
             for name in files:
                 filepath = os.path.join(root, name)
-                # Exclude files by extension and name
                 if any(filepath.endswith(ext) for ext in exclude_extensions):
                     continue
                 if any(name.lower().startswith(exclude_name) for exclude_name in exclude_names):
                     continue
                 try:
-                    # Get file size
                     size = os.path.getsize(filepath)
                 except FileNotFoundError:
-                    # Skip this file and continue with the next one
                     continue
 
-                # Get date last accessed
                 accessed_time = os.path.getatime(filepath)
                 accessed_date = datetime.datetime.fromtimestamp(accessed_time)
-                # Calculate how many months ago the file was last accessed
                 months_since_accessed = (datetime.datetime.now() - accessed_date).days // 30
-                # Check if file is larger than minimum size and has not been accessed in several months
                 if size > min_file_size and months_since_accessed >= months_unused:
-                    # Add file to results list
                     results.append({'Name': name, 'Path': filepath, 'Size': size, 'Last Accessed': accessed_date})
 
-        # Update result label with report
         if len(results) == 0:
-            self.result_label.configure(text="No large and unused files were found.")
+            tk.messagebox.showinfo("SpaceFinder", "No large and unused files were found.")
         else:
-            report = "Large and unused files:\n\n"
-            for result in results:
-                report += f"{result['Path']} ({result['Size'] / (1024 * 1024):.2f} MB) last accessed on {result['Last Accessed'].strftime('%m/%d/%Y')} at {result['Last Accessed'].strftime('%I:%M %p')}\n"
-            report += f"\nFound {len(results)} large and unused files."
-            self.result_label.configure(text=report)
+            results_window = tk.Toplevel(self.master)
+            ResultsWindow(results_window, results)
 
 root = tk.Tk()
 my_gui = SpaceFinderGUI(root)
