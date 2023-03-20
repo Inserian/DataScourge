@@ -16,6 +16,6 @@
         <li>Exclusions</li>
         <li>Directory to Search</li>
     </ol>
-    <p>This is a work in progress.</p>
+    <p>This is a fun little work in progress.</p>
 </body>
 </html>
