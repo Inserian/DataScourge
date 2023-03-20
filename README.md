@@ -6,7 +6,7 @@
 
 </head>
 <body>
-    <h1>DataScourge</h1>
+    <h1>DataScourge - SpaceFinder</h1>
     <p>Simple python program with GUI interface to search for files of specified sizes that haven't been open or used in specified dates.</p>
     <p>All values are editable including</p>
     <ol>
